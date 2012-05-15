@@ -17,25 +17,33 @@ You should have received a copy of the GNU General Public License along with thi
 </head>
 <body>
 <center><h1>XSSmh - Cross-Site Scripting</h1></center><br>
-| <a href="xss.php">Reflected Cross-Site Scripting</a> || <a href="pxss.php">Persistent Cross-Site Scripting</a> || <a href="challenges.htm">Challenges</a> | 
+<center>| <a href="xss.php">Cross-Site Scripting</a> || <a href="challenges.htm">Challenges</a> | </center>
 <hr width="40%">
 <hr width="60%">
 <hr width="40%">
 <br>
 <form name='inject_form'>
-	<table><tr><td>Injection String:</td><td><textarea name='inject_string'></textarea></td></tr>
+	<table><tr><td>Injection String:</td><td><textarea name='inject_string'><?php echo (isset($_REQUEST['inject_string']) ? htmlentities($_REQUEST['inject_string']) : '' ); ?></textarea></td></tr>
 	<tr><td>Injection Location:</td><td>
 		<select name="location">
 			<option value="body">Body</option>
-			<option value="attribute_single">Attribute value (wrapped in single quotes)</option>
-			<option value="attribute_double">Attribute value (wrapped in double quotes)</option>
-			<option value="attribute_noquotes">Attribute value (not wrapped in quotes)</option>
+			<option value="attribute_single" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_single") echo "selected"; ?>>Attribute value (wrapped in single quotes)</option>
+			<option value="attribute_double" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_double") echo "selected"; ?>>Attribute value (wrapped in double quotes)</option>
+			<option value="attribute_noquotes" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_noquotes") echo "selected"; ?>>Attribute value (not wrapped in quotes)</option>
 		</select></td></tr>
+		<tr><td>Custom HTML (*INJECT* specifies injection point):</td><td><textarea name="custom_inject"><?php echo (isset($_REQUEST['custom_inject']) ? htmlentities($_REQUEST['custom_inject']) : '' ); ?></textarea></td></tr>
+	<tr><td>Persistent?</td><td><input type='checkbox' name='persistent' <?php echo (isset($_REQUEST['persistent']) ? 'checked' : ''); ?>>
 	<tr><td><b>Input Sanitization:</b></td></tr>
-		<tr><td>Remove Quotes?</td><td><input type='checkbox' name="quotes_remove"></td></tr>
-		<tr><td>Remove Spaces?</td><td><input type="checkbox" name="spaces_remove"></td></tr>
-		<tr><td>Remove Slashes?</td><td><input type="checkbox" name="slashes_remove"></td></tr>
-		<tr><td>Remove Angle Brackets &lt; &gt;?</td><td><input type="checkbox" name="angle_remove" <?php echo (isset($_REQUEST['angle_remove']) ? 'checked' : ''); ?>></td></tr>
+	<tr><td>Blacklist Level:</td><td><select name="blacklist_level">
+		<option value="none">No blacklisting</option>
+		<option value="reject_low" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="reject_low") echo "selected"; ?>>Reject (Low)</option>
+		<option value="reject_high" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="reject_high") echo "selected"; ?>>Reject (High)</option>
+		<option value="escape" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="escape") echo "selected"; ?>>Escape</option>
+		<option value="low" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="low") echo "selected"; ?>>Remove (Low)</option>
+		<option value="medium" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="medium") echo "selected"; ?>>Remove (Medium)</option>
+		<option value="high" <?php if(isset($_REQUEST["blacklist_level"]) and $_REQUEST["blacklist_level"]=="high") echo "selected"; ?>>Remove (High)</option>
+	</select></td></tr>
+	<tr><td>Blacklist Keywords (comma separated):</td><td><textarea name="blacklist_keywords"><?php if(isset($_REQUEST["blacklist_keywords"])) echo $_REQUEST["blacklist_keywords"]; ?></textarea></td></tr>
 	</table>
 	<input type="submit" name="submit" value="Inject!">
 </form>
@@ -45,30 +53,90 @@ if(isset($_REQUEST['submit'])){
 	$base_output = 'Foo! <input type="text" value="bar!">';
 	
 	//sanitization section
-	if(isset($_REQUEST['quotes_remove']) and $_REQUEST['quotes_remove'] == 'on') $_REQUEST['inject_string'] = str_replace("'", "", $_REQUEST['inject_string']);
-	if(isset($_REQUEST['spaces_remove']) and $_REQUEST['spaces_remove'] == 'on') $_REQUEST['inject_string'] = str_replace(' ', '', $_REQUEST['inject_string']);
-	if(isset($_REQUEST['slashes_remove']) and $_REQUEST['slashes_remove'] == 'on') $_REQUEST['inject_string'] = str_replace('/', '', $_REQUEST['inject_string']);
-	if(isset($_REQUEST['angle_remove']) and $_REQUEST['angle_remove'] == 'on'){
-		$_REQUEST['inject_string'] = str_replace('<', '', $_REQUEST['inject_string']);
-		$_REQUEST['inject_string'] = str_replace('>', '', $_REQUEST['inject_string']);
+	if(isset($_REQUEST['blacklist_keywords'])){
+		$blacklist = explode(',' , $_REQUEST['blacklist_keywords']);
 	}
 	
-	switch ($_REQUEST['location']){
-		case 'body':
-			$output = str_replace('Foo!', $_REQUEST['inject_string'], $base_output);
-			break;
-		case 'attribute_single':
-			$output = str_replace('"bar!"', '\''.$_REQUEST['inject_string'].'\'', $base_output);
-			break;
-		case 'attribute_double':
-			$output = str_replace('bar!', $_REQUEST['inject_string'], $base_output);
-			break;
-		case 'attribute_noquotes':
-			$output = str_replace('"bar!"', $_REQUEST['inject_string'], $base_output);
-			break;
+	if(isset($_REQUEST['blacklist_level'])){
+		switch($_REQUEST['blacklist_level']){
+			//We process blacklists differently at each level. At the lowest, each keyword is removed case-sensitively.
+			//At medium blacklisting, checks are done case-insensitively.
+			//At the highest level, checks are done case-insensitively and repeatedly.
+			
+			case 'reject_low':
+				foreach($blacklist as $keyword){
+					if(strstr($_REQUEST['inject_string'], $keyword)!='') {
+						die("\nBlacklist was triggered!");
+					}
+				}
+				break;
+			case 'reject_high':
+				foreach($blacklist as $keyword){
+					if(strstr(strtolower($_REQUEST['inject_string']), strtolower($keyword))!='') {
+						die('\nBlacklist was triggered!');
+					}
+				}
+				break;
+			case 'escape':
+				foreach($blacklist as $keyword){
+					$_REQUEST['inject_string'] = str_replace($keyword, htmlentities($keyword), $_REQUEST['inject_string']);
+				}
+				break;
+			case 'low':
+				foreach($blacklist as $keyword){
+					$_REQUEST['inject_string'] = str_replace($keyword, '', $_REQUEST['inject_string']);
+				}
+				break;
+			case 'medium':
+				foreach($blacklist as $keyword){
+					$_REQUEST['inject_string'] = str_replace(strtolower($keyword), '', strtolower($_REQUEST['inject_string']));
+				}
+				break;
+			case 'high':
+				do{
+					$keyword_found = 0;
+					foreach($blacklist as $keyword){
+						$_REQUEST['inject_string'] = str_replace(strtolower($keyword), '', strtolower($_REQUEST['inject_string']), $count);
+						$keyword_found += $count;
+					}	
+				}while ($keyword_found);
+				break;
+			
+		}
 	}
 	
-	echo $output;
+	if (isset($_REQUEST['custom_inject']) and $_REQUEST['custom_inject']!=''){
+		$output = str_replace('*INJECT*', $_REQUEST['inject_string'], $_REQUEST['custom_inject']);
+	}else{
+		switch ($_REQUEST['location']){
+			case 'body':
+				$output = str_replace('Foo!', $_REQUEST['inject_string'], $base_output);
+				break;
+			case 'attribute_single':
+				$output = str_replace('"bar!"', '\''.$_REQUEST['inject_string'].'\'', $base_output);
+				break;
+			case 'attribute_double':
+				$output = str_replace('bar!', $_REQUEST['inject_string'], $base_output);
+				break;
+			case 'attribute_noquotes':
+				$output = str_replace('"bar!"', $_REQUEST['inject_string'], $base_output);
+				break;
+		}
+	}
+	
+	if(isset($_REQUEST['persistent'])){
+	
+		$fhandle = fopen('pxss.html','w') or die('Whoops! Can\'t write to our PXSS file.');
+		fwrite($fhandle, $output);
+		fclose($fhandle);
+	
+		echo "<a href='pxss.html'>See the output</a>";
+		
+	}else{
+		
+		echo $output;
+	
+	}
 	
 }
 
