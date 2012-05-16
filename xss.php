@@ -73,7 +73,7 @@ if(isset($_REQUEST['submit'])){
 			case 'reject_high':
 				foreach($blacklist as $keyword){
 					if(strstr(strtolower($_REQUEST['inject_string']), strtolower($keyword))!='') {
-						die('\nBlacklist was triggered!');
+						die("\nBlacklist was triggered!");
 					}
 				}
 				break;
