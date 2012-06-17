@@ -9,3 +9,9 @@ Changed reflected XSS page to just XSS page
 Added persistent option to XSS page
 Added pxss.html file to tree to fix bug
 Added two challenges
+
+v0.2.1
+Added three challenges
+Added tutorials for all challenges
+Added new injection locations
+Added license file (whoops!)

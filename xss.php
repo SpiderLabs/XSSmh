@@ -30,6 +30,8 @@ You should have received a copy of the GNU General Public License along with thi
 			<option value="attribute_single" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_single") echo "selected"; ?>>Attribute value (wrapped in single quotes)</option>
 			<option value="attribute_double" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_double") echo "selected"; ?>>Attribute value (wrapped in double quotes)</option>
 			<option value="attribute_noquotes" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="attribute_noquotes") echo "selected"; ?>>Attribute value (not wrapped in quotes)</option>
+			<option value="image_src" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="image_src") echo "selected"; ?>>Image URL</option>
+			<option value="javascript" <?php if(isset($_REQUEST["location"]) and $_REQUEST["location"]=="javascript") echo "selected"; ?>>JavaScript</option>
 		</select></td></tr>
 		<tr><td>Custom HTML (*INJECT* specifies injection point):</td><td><textarea name="custom_inject"><?php echo (isset($_REQUEST['custom_inject']) ? htmlentities($_REQUEST['custom_inject']) : '' ); ?></textarea></td></tr>
 	<tr><td>Persistent?</td><td><input type='checkbox' name='persistent' <?php echo (isset($_REQUEST['persistent']) ? 'checked' : ''); ?>>
@@ -50,7 +52,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 <?php
 if(isset($_REQUEST['submit'])){
-	$base_output = 'Foo! <input type="text" value="bar!">';
+	$base_output = 'Foo! <img src="baz.jpg"><input type="text" value="bar!"><script>a="javascript";</script>';
 	
 	//sanitization section
 	if(isset($_REQUEST['blacklist_keywords'])){
@@ -89,14 +91,14 @@ if(isset($_REQUEST['submit'])){
 				break;
 			case 'medium':
 				foreach($blacklist as $keyword){
-					$_REQUEST['inject_string'] = str_replace(strtolower($keyword), '', strtolower($_REQUEST['inject_string']));
+					$_REQUEST['inject_string'] = str_ireplace($keyword, '', $_REQUEST['inject_string']);
 				}
 				break;
 			case 'high':
 				do{
 					$keyword_found = 0;
 					foreach($blacklist as $keyword){
-						$_REQUEST['inject_string'] = str_replace(strtolower($keyword), '', strtolower($_REQUEST['inject_string']), $count);
+						$_REQUEST['inject_string'] = str_ireplace($keyword, '', $_REQUEST['inject_string'], $count);
 						$keyword_found += $count;
 					}	
 				}while ($keyword_found);
@@ -120,6 +122,12 @@ if(isset($_REQUEST['submit'])){
 				break;
 			case 'attribute_noquotes':
 				$output = str_replace('"bar!"', $_REQUEST['inject_string'], $base_output);
+				break;
+			case 'image_src':
+				$output = str_replace('baz.jpg', $_REQUEST['inject_string'], $base_output);
+				break;
+			case 'javascript':
+				$output = str_replace('javascript', $_REQUEST['inject_string'], $base_output);
 				break;
 		}
 	}
