@@ -134,7 +134,7 @@ if(isset($_REQUEST['submit'])){
 	
 	if(isset($_REQUEST['persistent'])){
 	
-		$fhandle = fopen('pxss.html','w') or die('Whoops! Can\'t write to our PXSS file.');
+		$fhandle = fopen('pxss.html','w') or die('Whoops! Can\'t write to our PXSS file. Did you run setup.sh?');
 		fwrite($fhandle, $output);
 		fclose($fhandle);
 	

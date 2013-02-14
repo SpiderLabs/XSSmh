@@ -26,7 +26,7 @@ Web server
 USAGE
 =====
 
-Place the XSSmh source files on your Web server and
+Place the XSSmh source files on your Web server, run setup.sh and
 open in a Web browser.
 
 COPYRIGHT
@@ -35,7 +35,7 @@ COPYRIGHT
 XSSmh - A configurable Cross-Site Scripting testbed
 Daniel "unicornFurnace" Crowley
 Copyright (C) 2012 Trustwave Holdings, Inc.
- 
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
